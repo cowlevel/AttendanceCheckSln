@@ -117,7 +117,7 @@ namespace AttendanceCheck.Areas.Identity.Pages.Account
 
                     _logger.LogInformation("User created a new account with password.");
 
-                    return RedirectToAction("Index", "Login");
+                    return RedirectToAction("Index", "Home");
                     /*
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));

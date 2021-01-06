@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using AttendanceCheck.ApplicationEFCore;
 using AttendanceCheck.Models;
 using Microsoft.AspNetCore.Authorization;
+using AttendanceCheck.ViewModels;
+using Microsoft.AspNetCore.Identity;
 
 namespace AttendanceCheck.Controllers
 {
@@ -15,141 +17,138 @@ namespace AttendanceCheck.Controllers
     public class GroupController : Controller
     {
         private readonly AttendanceCheckDbContext _context;
+        private readonly SignInManager<IdentityUser> _signInManager;
 
-        public GroupController(AttendanceCheckDbContext context)
+        public GroupController(AttendanceCheckDbContext context,
+                               SignInManager<IdentityUser> signInManager)
         {
             _context = context;
+            _signInManager = signInManager;
         }
 
         // GET: Group
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Groups.ToListAsync());
+            //var userId = await GetCurrentUserIdAsync();
+            //var groupVM = await _context.Groups
+            //    .Where(g => g.AppUser.IdentityGUID == userId)
+            //    .Select(s => new GroupViewModel { GroupId = s.GroupId, GroupName = s.GroupName })
+            //    .ToListAsync();
+
+            return View(await GetGroups());
         }
 
-        // GET: Group/Details/5
-        public async Task<IActionResult> Details(int? id)
+        [HttpGet]
+        public async Task<IActionResult> LoadData()
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var @group = await _context.Groups
-                .FirstOrDefaultAsync(m => m.GroupId == id);
-            if (@group == null)
-            {
-                return NotFound();
-            }
-
-            return View(@group);
+            return Json(await GetGroups());
         }
 
-        // GET: Group/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: Group/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for 
-        // more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("GroupId,GroupName")] Group @group)
+        public async Task<IActionResult> Create([FromBody] CreateGroupViewModel @group)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(@group);
+                var userId = await GetCurrentUserIdAsync();
+                var currentAppUser = await _context.ApplicationUsers
+                    .Where(u => u.IdentityGUID == userId)
+                    .FirstOrDefaultAsync();
+
+                var newGroup = new Group
+                {
+                    AppUser = currentAppUser,
+                    GroupName = @group.GroupName
+                };
+
+                _context.Add(newGroup);
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                
+                return Ok(new { Message = "Successfully create new group" });
             }
-            return View(@group);
+
+            return BadRequest(ModelState);
         }
 
-        // GET: Group/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var @group = await _context.Groups.FindAsync(id);
-            if (@group == null)
-            {
-                return NotFound();
-            }
-            return View(@group);
-        }
-
-        // POST: Group/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for 
-        // more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("GroupId,GroupName")] Group @group)
+        public async Task<IActionResult> Edit([FromBody] EditGroupViewModel @group)
         {
-            if (id != @group.GroupId)
-            {
-                return NotFound();
-            }
 
             if (ModelState.IsValid)
             {
-                try
+                if (group.GroupId == 0 || group.GroupId < 0)
                 {
-                    _context.Update(@group);
-                    await _context.SaveChangesAsync();
+                    return BadRequest(new { Message = "Invalid input(s)" });
                 }
-                catch (DbUpdateConcurrencyException)
+
+                var userId = await GetCurrentUserIdAsync();
+                var appUserGroup = await _context.Groups
+                    .Where(g => g.AppUser.IdentityGUID == userId && g.GroupId == group.GroupId)
+                    .FirstOrDefaultAsync();
+
+                if (appUserGroup == null)
                 {
-                    if (!GroupExists(@group.GroupId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    return BadRequest(new { Message = "Invalid input(s)" });
                 }
-                return RedirectToAction(nameof(Index));
+
+                appUserGroup.GroupName = group.GroupName;
+
+                _context.Update(appUserGroup);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { Message = "Successfully updated group" });
             }
-            return View(@group);
+
+            return BadRequest(new { Message = "Invalid input(s)" });
         }
 
-        // GET: Group/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var @group = await _context.Groups
-                .FirstOrDefaultAsync(m => m.GroupId == id);
-            if (@group == null)
-            {
-                return NotFound();
-            }
-
-            return View(@group);
-        }
-
-        // POST: Group/Delete/5
-        [HttpPost, ActionName("Delete")]
+        
+        [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var @group = await _context.Groups.FindAsync(id);
-            _context.Groups.Remove(@group);
+            if (id == 0 || id < 0)
+            {
+                return BadRequest(new { Message = "Invalid input(s)" });
+            }
+
+            var userId = await GetCurrentUserIdAsync();
+            //var appUserId = await _context.ApplicationUsers
+            //    .Where(a => a.IdentityGUID == userId)
+            //    //.Select(s => new { x= s.UserId })
+            //    .SingleOrDefaultAsync();
+            //var z = appUserId.UserId;
+            var appUserGroup = await _context.Groups
+                .Include(g => g.AppUser)
+                .Where(g => g.GroupId == id && g.AppUser.IdentityGUID == userId)
+                .SingleOrDefaultAsync();
+
+            if (appUserGroup == null)
+            {
+                return BadRequest(new { Message = "Invalid input(s)" });
+            }
+
+            _context.Groups.Remove(appUserGroup);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+
+            return Ok(new { Message = "Successfully deleted group" });
         }
 
-        private bool GroupExists(int id)
+        private async Task<IEnumerable<GroupViewModel>> GetGroups()
         {
-            return _context.Groups.Any(e => e.GroupId == id);
+            var userId = await GetCurrentUserIdAsync();
+            return await _context.Groups
+                .Where(g => g.AppUser.IdentityGUID == userId)
+                .Select(s => new GroupViewModel { GroupId = s.GroupId, GroupName = s.GroupName })
+                .ToListAsync();
+        }
+
+        private async Task<string> GetCurrentUserIdAsync()
+        {
+            var user = await _signInManager.UserManager.GetUserAsync(User);
+
+            return user.Id;
         }
     }
 }
