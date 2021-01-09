@@ -1,0 +1,287 @@
+﻿@model IEnumerable<AttendanceCheck.ViewModels.GroupViewModel>
+
+@{
+    ViewData["Title"] = "Person";
+}
+
+<h1>Person</h1>
+<div class="container">
+    <div class="row">
+        <div class="col-md-4">
+            <select class="form-control mt-2" id="groupDropDown" onchange="loadData()">
+                <option value="0">Select Group...</option>
+                @foreach (var item in Model)
+                {
+                    <option value="@item.GroupId">@item.GroupName</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button onclick="createNew()" id="btnCreateNew" type="button" class="btn btn-primary btn-block mt-2" data-toggle="modal" data-target="#personModal" disabled>
+                Create New
+            </button>
+        </div>
+    </div>
+</div>
+<wbr />
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                Name
+                @*@Html.DisplayNameFor(model => model.LastName)*@
+            </th>
+            @*<th>
+                    @Html.DisplayNameFor(model => model.FirstName)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.ContactNo)
+                </th>*@
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="personTableBody">
+        @*@foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.FirstName) @Html.DisplayFor(modelItem => item.LastName)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.FirstName)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.ContactNo)
+                    </td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@item.PersonId">Edit</a> |
+                        <a asp-action="Details" asp-route-id="@item.PersonId">Details</a> |
+                        <a asp-action="Delete" asp-route-id="@item.PersonId">Delete</a>
+                    </td>
+                </tr>
+            }*@
+    </tbody>
+</table>
+
+<!-- Modal Create or Edit -->
+<div class="modal fade" id="personModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="modalTitle" class="modal-title">Create New Group</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <partial name="/Views/Person/_ModalPersonPartial.cshtml" model="new AttendanceCheck.ViewModels.EditPersonViewModel()" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Delete -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Confirmation</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label id="deleteMessage">Are you sure you want to delete this group?</label>
+                </div>
+                <div class="form-group">
+                    <form id="deleteForm">
+                        <button id="btnCancel" type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+                        <button onclick="deleteGroup()" type="submit" class="btn btn-danger">Yes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<button id="btn" class="btn btn-primary">Click Me</button>*@
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script type="text/javascript">
+    var personId = 0;
+    var groupId = 0;
+    var selectedPerson = {};
+    var selectedDOM;
+    var inputsValid = false;
+    var addMode = false;
+    var token = $('[name=__RequestVerificationToken]').val();
+
+    $(document).ready(function () {
+
+    });
+
+    //$('#btn').on('click', function () {
+    //    console.log('REMOVED '+selectedPerson);
+    //    selectedDOM.closest('tr').remove();
+
+
+    //});
+
+
+    $(document).on('click', '.editMode', function () {
+        inputsValid = false;
+        addMode = false;
+        selectedPerson = $(this).data('person');
+        console.log(selectedPerson);
+
+        $('#modalTitle').text('Edit person');
+        $('.validation').html('');
+
+        $('#GroupId').val(selectedPerson.GroupId);
+        $('#PersonId').val(selectedPerson.PersonId);
+        $('#LastName').val(selectedPerson.LastName);
+        $('#FirstName').val(selectedPerson.FirstName);
+        $('#ContactNo').val(selectedPerson.ContactNo);
+
+        $('#btnSaveOrUpdate').text('Update');
+    });
+
+    $(document).on('click', '.deleteMode', function () {
+        selectedPerson = $(this).data('person');
+        selectedDOM = $(this);
+        console.log(selectedPerson);
+
+        $('#deleteMessage').text(`Are you sure you want to delete ${selectedPerson.FirstName} ${selectedPerson.LastName}?`);
+    });
+
+    function createNew() {
+        addMode = true;
+        inputsValid = false;
+
+        $('#modalTitle').text('Create new person');
+        $('.validation').html('');
+
+        $('#GroupId').val('');
+        $('#PersonId').val('');
+        $('#LastName').val('');
+        $('#FirstName').val('');
+        $('#ContactNo').val('');
+
+        $('#btnSaveOrUpdate').text('Save');
+    }
+
+    function saveNewPerson() {
+        inputsValid = $('#personForm').valid();
+
+        if (inputsValid === true) {
+            var newPerson = {
+                GroupId: $('#groupDropDown').val(),
+                LastName: $('#LastName').val(),
+                FirstName: $('#FirstName').val(),
+                ContactNo: $('#ContactNo').val()
+            }
+
+            const jsonNewPerson = JSON.stringify(newPerson);
+
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("Create", "Person")',
+                headers: { 'RequestVerificationToken': token },
+                contentType: 'application/json; charset=utf-8',
+                data: jsonNewPerson,
+                dataType: 'json',
+                success: function (result) {
+                    //  do something here
+                    var btnDelete, btnEdit, tblDataButtons, tblRow;
+
+                    btnDelete = $(`<button type="button" class="btn btn-danger deleteMode" data-toggle="modal" data-target="#deleteModal"><i class="fa fa-trash" aria-hidden="true"></i> Delete</button>`);
+                    btnDelete.data('person', { GroupId: item.GroupId, PersonId: item.PersonId, FirstName: item.FirstName, LastName: item.LastName, ContactNo: item.ContactNo });
+                    btnEdit = $(`<button type ="button" class="btn btn-light editMode" data-toggle="modal" data-target="#personModal"><i class="fa fa-pencil" aria-hidden="true"></i> Edit</button>`);
+                    btnEdit.data('person', { GroupId: item.GroupId, PersonId: item.PersonId, FirstName: item.FirstName, LastName: item.LastName, ContactNo: item.ContactNo });
+
+                    tblDataButtons = $(`<td></td>`);
+                    tblDataButtons.append(btnEdit).append(' ');
+                    tblDataButtons.append(btnDelete);
+
+                    tblDataFN = $(`<td>${item.FirstName} ${item.LastName}</td>`);
+
+                    tblRow = $(`<tr data-rowid='${item.PersonId}'></tr>`);
+                    tblRow.append(tblDataFN);
+                    tblRow.append(tblDataButtons);
+
+                    $('#personTableBody').append(tblRow);
+
+                    $('#personModal').modal('hide');
+                },
+                error: function (errormessage) {
+                    console.log('GG');
+                    console.log(errormessage.Message);
+                }
+            });
+        }
+    }
+
+    function editPerson() {
+
+    }
+
+    function updatePerson() {
+
+    }
+
+    function saveOrUpdate() {
+
+    }
+
+    function loadData() {
+        if ($('#groupDropDown').val() != 0) {
+            $('#btnCreateNew').attr('disabled', false);
+        } else {
+            $('#btnCreateNew').attr('disabled', true);
+        }
+        
+
+        const gid = JSON.stringify($('#groupDropDown').val());
+
+        $.ajax({
+            type: 'POST',
+            url: '@Url.Action("LoadPersonGroupData", "Person")',
+            headers: { 'RequestVerificationToken': token },
+            contentType: 'application/json; charset=utf-8',
+            data: gid,
+            dataType: 'json',
+            success: function (result) {
+                $('#personTableBody').empty();
+
+                var btnDelete, btnEdit, tblDataButtons, tblRow;
+
+                $.each(result, function (key, item) {
+                    btnDelete = $(`<button type="button" class="btn btn-danger deleteMode" data-toggle="modal" data-target="#deleteModal"><i class="fa fa-trash" aria-hidden="true"></i> Delete</button>`);
+                    btnDelete.data('person', { GroupId: item.GroupId, PersonId: item.PersonId, FirstName: item.FirstName, LastName: item.LastName, ContactNo: item.ContactNo });
+                    btnEdit = $(`<button type ="button" class="btn btn-light editMode" data-toggle="modal" data-target="#personModal"><i class="fa fa-pencil" aria-hidden="true"></i> Edit</button>`);
+                    btnEdit.data('person', { GroupId: item.GroupId, PersonId: item.PersonId, FirstName: item.FirstName, LastName: item.LastName, ContactNo: item.ContactNo });
+
+                    tblDataButtons = $(`<td></td>`);
+                    tblDataButtons.append(btnEdit).append(' ');
+                    tblDataButtons.append(btnDelete);
+
+                    tblDataFN = $(`<td>${item.FirstName} ${item.LastName}</td>`);
+
+                    tblRow = $(`<tr data-rowid='${item.PersonId}'></tr>`);
+                    tblRow.append(tblDataFN);
+                    tblRow.append(tblDataButtons);
+
+                    $('#personTableBody').append(tblRow);
+                });
+            },
+            error: function (errormessage) {
+                console.log('GG');
+                console.log(errormessage.Message);
+            }
+        });
+    }
+    </script>
+}

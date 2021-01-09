@@ -1,11 +1,10 @@
 ﻿@model IEnumerable<AttendanceCheck.ViewModels.GroupViewModel>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Groups";
 }
 
-<h1>Group</h1>
-
+<h1>Groups</h1>
 <p>
     <button onclick="createNew()" id="btnCreateNew" type="button" class="btn btn-primary" data-toggle="modal" data-target="#groupModal">
         Create New
@@ -110,6 +109,40 @@
             }
         });
     });
+
+    function createNew() {
+        addMode = true;
+        inputsValid = false;
+
+        $('#modalTitle').text('Create new group');
+        //$('#groupForm')[0].reset();
+        $('#GroupName').val('');
+        $('#validation').html('');  //  reset validation
+        $('#btnSaveOrUpdate').text('Save');
+    }
+
+    function setGroupEdit(gid, grpName) {
+        addMode = false;
+        inputsValid = false;
+
+        id = gid;
+        groupName = grpName;
+
+        $('#modalTitle').text('Edit group');
+        $('#validation').html('');
+        //$('.field-validation-valid').html('');
+
+        $('#GroupId').val(id);
+        $('#GroupName').val(groupName);
+        $('#btnSaveOrUpdate').text('Update');
+    }
+
+    function setGroupDelete(gid, grpName) {
+        addMode = false;
+        id = gid;
+        groupName = grpName;
+        $('#deleteMessage').text(`Are you sure you want to delete group ${groupName}?`);
+    }
 
     function saveOrUpdate() {
         if ($('#btnSaveOrUpdate').text() == 'Save') {
@@ -217,40 +250,6 @@
                 console.log(errormessage.Message);
             }
         });
-    }
-
-    function createNew() {
-        addMode = true;
-        inputsValid = false;
-
-        $('#modalTitle').text('Create new group');
-        //$('#groupForm')[0].reset();
-        $('#GroupName').val('');
-        $('#validation').html('');  //  reset validation
-        $('#btnSaveOrUpdate').text('Save');
-    }
-
-    function setGroupEdit(gid, grpName) {
-        addMode = false;
-        inputsValid = false;
-
-        id = gid;
-        groupName = grpName;
-
-        $('#modalTitle').text('Edit group');
-        $('#validation').html('');
-        //$('.field-validation-valid').html('');
-
-        $('#GroupId').val(id);
-        $('#GroupName').val(groupName);
-        $('#btnSaveOrUpdate').text('Update');
-    }
-
-    function setGroupDelete(gid, grpName) {
-        addMode = false;
-        id = gid;
-        groupName = grpName;
-        $('#deleteMessage').text(`Are you sure you want to delete group ${groupName}?`);
     }
 </script>
 }

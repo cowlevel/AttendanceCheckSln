@@ -1,0 +1,31 @@
+﻿@model AttendanceCheck.ViewModels.EditPersonViewModel
+
+
+<form id="personForm">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" asp-for="GroupId" />
+    <input type="hidden" asp-for="PersonId" />
+    <div class="form-group">
+        <label asp-for="LastName" class="control-label"></label>
+        <input asp-for="LastName" class="form-control" />
+        <span asp-validation-for="LastName" class="text-danger validation"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="FirstName" class="control-label"></label>
+        <input asp-for="FirstName" class="form-control" />
+        <span asp-validation-for="FirstName" class="text-danger validation"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="ContactNo" class="control-label"></label>
+        <input asp-for="ContactNo" class="form-control" />
+        <span asp-validation-for="ContactNo" class="text-danger validation"></span>
+    </div>
+    <div class="form-group">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button id="btnSaveOrUpdate" onclick="saveOrUpdate()" type="submit" class="btn btn-primary">Save</button>
+    </div>
+</form>
+
+@*@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}*@
