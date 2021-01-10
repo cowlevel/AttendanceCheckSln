@@ -37,9 +37,11 @@ namespace AttendanceCheck
 
 
 
-            services.AddDbContext<AttendanceCheckDbContext>(options =>
+            services.AddDbContext<AttendanceCheckDbContext>(options => {
                 options.UseSqlServer(
-                    Configuration.GetConnectionString("DefaultConnectionApplication")));
+                    Configuration.GetConnectionString("DefaultConnectionApplication")).EnableSensitiveDataLogging();
+                    //Configuration.GetConnectionString("DefaultConnectionApplication"));
+        });
 
             services.AddControllers().AddNewtonsoftJson(options =>
             {
@@ -51,6 +53,7 @@ namespace AttendanceCheck
 
             services.AddControllersWithViews();
             services.AddRazorPages();
+            services.AddMvcCore();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -71,7 +74,7 @@ namespace AttendanceCheck
             app.UseStaticFiles();
 
             app.UseRouting();
-
+            
             app.UseAuthentication();
             app.UseAuthorization();
 

@@ -6,14 +6,14 @@
     <input type="hidden" asp-for="GroupId" />
     <input type="hidden" asp-for="PersonId" />
     <div class="form-group">
-        <label asp-for="LastName" class="control-label"></label>
-        <input asp-for="LastName" class="form-control" />
-        <span asp-validation-for="LastName" class="text-danger validation"></span>
-    </div>
-    <div class="form-group">
         <label asp-for="FirstName" class="control-label"></label>
         <input asp-for="FirstName" class="form-control" />
         <span asp-validation-for="FirstName" class="text-danger validation"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="LastName" class="control-label"></label>
+        <input asp-for="LastName" class="form-control" />
+        <span asp-validation-for="LastName" class="text-danger validation"></span>
     </div>
     <div class="form-group">
         <label asp-for="ContactNo" class="control-label"></label>
@@ -22,7 +22,7 @@
     </div>
     <div class="form-group">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button id="btnSaveOrUpdate" onclick="saveOrUpdate()" type="submit" class="btn btn-primary">Save</button>
+        <button id="btnSaveOrUpdate" type="submit" class="btn btn-primary">Save</button>
     </div>
 </form>
 

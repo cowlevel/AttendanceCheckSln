@@ -30,9 +30,11 @@ namespace AttendanceCheck.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-
-
             //return View(await _context.People.ToListAsync());
+            //var pgvm = new PGVM();
+            //pgvm.GroupVM = await GetGroups();
+            //return View(pgvm);
+
             return View(await GetGroups());
         }
 
@@ -46,16 +48,12 @@ namespace AttendanceCheck.Controllers
             }
 
             var currentUserId = await GetCurrentUserIdAsync();
+            var groupByCurrentUser = await _context.Groups
+                .Where(u => u.AppUser.IdentityGUID == currentUserId
+                            && u.GroupId == id)
+                .FirstOrDefaultAsync() != null;
 
-            var isValidGroupByCurrentUser = await _context.Groups
-                .Include(a => a.AppUser)
-                .Include(p=>p.People)
-                .Where(g => g.AppUser.IdentityGUID == currentUserId
-                        && g.GroupId == id
-                        && g.People.Where(x => x.PersonGroup.GroupId == id).Count() > 0)
-                .ToListAsync() != null;
-
-            if (!isValidGroupByCurrentUser)
+            if (groupByCurrentUser == false)
             {
                 return BadRequest(new { Message = "Invalid input(s)" });
             }
@@ -72,7 +70,6 @@ namespace AttendanceCheck.Controllers
                 })
                 .ToListAsync();
 
-            //return View(await _context.People.ToListAsync());
             return Json(people);
         }
 
@@ -94,42 +91,65 @@ namespace AttendanceCheck.Controllers
             return View(person);
         }
 
-        // GET: Person/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
+        //public async Task<IActionResult> GetPerson(int? id, int? gid)
+        //{
+        //    if (id == null)
+        //    {
+        //        return NotFound();
+        //    }
+
+        //    var userIdGUID = await GetCurrentUserIdAsync();
+        //    var personOfCurrentUser = await _context.People
+        //        .Where(g => g.PersonGroup.AppUser.IdentityGUID == userIdGUID
+        //                 && g.PersonGroup.GroupId == gid
+        //                 && g.PersonId == id)
+        //        .SingleOrDefaultAsync();
+
+        //    var person = await _context.People
+        //        .FirstOrDefaultAsync(m => m.PersonId == id);
+        //    if (person == null)
+        //    {
+        //        return NotFound();
+        //    }
+
+        //    return PartialView("/Views/Person/_ModalPersonPartial", personOfCurrentUser);
+        //}
 
         // POST: Person/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to, for 
         // more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("PersonId,LastName,FirstName,ContactNo")] Person person)
+        public async Task<IActionResult> Create([FromBody] CreatePersonViewModel person)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                _context.Add(person);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(person);
-        }
-
-        // GET: Person/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
+                return BadRequest(new { Message = "Invalid input(s)" });
             }
 
-            var person = await _context.People.FindAsync(id);
-            if (person == null)
+            var userIdGUID = await GetCurrentUserIdAsync();
+            var groupOfCurrentUser = await _context.Groups
+                .Where(a => a.AppUser.IdentityGUID == userIdGUID
+                        && a.GroupId == person.GroupId)
+                .FirstOrDefaultAsync();
+
+            if (groupOfCurrentUser == null)
             {
-                return NotFound();
+                return BadRequest(new { Message = "Invalid input(s)" });
             }
-            return View(person);
+
+            var newPerson = new Person
+            {
+                PersonGroup = groupOfCurrentUser,
+                LastName = person.LastName,
+                FirstName = person.FirstName,
+                ContactNo = person.ContactNo
+            };
+            
+            _context.People.Add(newPerson);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Successfully created new person", NewPerson = newPerson });
         }
 
         // POST: Person/Edit/5
@@ -137,63 +157,76 @@ namespace AttendanceCheck.Controllers
         // more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("PersonId,LastName,FirstName,ContactNo")] Person person)
+        public async Task<IActionResult> Edit([FromBody] EditPersonViewModel person)
         {
-            if (id != person.PersonId)
+            if (person.PersonId == 0 || person.PersonId < 0 ||
+                person.GroupId == 0 || person.GroupId < 0)
             {
-                return NotFound();
+                return BadRequest(new {Message = "Invalid input(s)" });
             }
 
             if (ModelState.IsValid)
             {
-                try
+                var userIdGUID = await GetCurrentUserIdAsync();
+                var personOfCurrentUser = await _context.People
+                    .Where(g => g.PersonGroup.AppUser.IdentityGUID == userIdGUID
+                             && g.PersonGroup.GroupId == person.GroupId
+                             && g.PersonId == person.PersonId)
+                    .SingleOrDefaultAsync();
+
+                if (personOfCurrentUser == null)
                 {
-                    _context.Update(person);
-                    await _context.SaveChangesAsync();
+                    return BadRequest(new { Message = "Invalid input(s)" });
                 }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!PersonExists(person.PersonId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
+
+                personOfCurrentUser.LastName = person.LastName;
+                personOfCurrentUser.FirstName = person.FirstName;
+                personOfCurrentUser.ContactNo = person.ContactNo;
+
+                _context.People.Update(personOfCurrentUser);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { Message = "Successfully created new person", UpdatedPerson = person });
             }
-            return View(person);
+
+            return BadRequest(new
+            {
+                Message = "Invalid input(s)",
+                Errors = ModelState.Values.SelectMany(e => e.Errors)
+                            .Select(e => e.ErrorMessage)
+            });
         }
 
-        // GET: Person/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var person = await _context.People
-                .FirstOrDefaultAsync(m => m.PersonId == id);
-            if (person == null)
-            {
-                return NotFound();
-            }
-
-            return View(person);
-        }
-
-        // POST: Person/Delete/5
-        [HttpPost, ActionName("Delete")]
+        [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public async Task<IActionResult> Delete([FromBody] int id)
         {
-            var person = await _context.People.FindAsync(id);
-            _context.People.Remove(person);
+            //var person = await _context.People.FindAsync(id);
+            //_context.People.Remove(person);
+            //await _context.SaveChangesAsync();
+            //return RedirectToAction(nameof(Index));
+            var userIdGUID = await GetCurrentUserIdAsync();
+
+            var personToDelete = await _context.Groups
+                .Where(p => p.AppUser.IdentityGUID == userIdGUID
+                         && p.People.FirstOrDefault(s => s.PersonId == id) != null)
+                .Select(x => x.People.FirstOrDefault(s => s.PersonId == id))
+                .FirstOrDefaultAsync();
+
+            //var personToDelete = await _context.People
+            //    .Where(p => p.PersonGroup.AppUser.IdentityGUID == userIdGUID
+            //             && p.PersonId == id)
+            //    .SingleOrDefaultAsync();
+
+            if (personToDelete == null)
+            {
+                return BadRequest(new { Message = "Invalid input(s)" });
+            }
+
+            _context.People.Remove(personToDelete);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+
+            return Ok(new { Message = "Successfully deleted person" });
         }
 
         private bool PersonExists(int id)

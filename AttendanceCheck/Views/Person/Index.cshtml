@@ -1,4 +1,5 @@
 ﻿@model IEnumerable<AttendanceCheck.ViewModels.GroupViewModel>
+@*@model AttendanceCheck.ViewModels.PGVM*@
 
 @{
     ViewData["Title"] = "Person";
@@ -17,7 +18,7 @@
             </select>
         </div>
         <div class="col-md-3">
-            <button onclick="createNew()" id="btnCreateNew" type="button" class="btn btn-primary btn-block mt-2" data-toggle="modal" data-target="#personModal" disabled>
+            <button id="btnCreateNew" type="button" class="btn btn-primary btn-block mt-2" data-toggle="modal" data-target="#personModal" disabled>
                 Create New
             </button>
         </div>
@@ -74,6 +75,32 @@
                 </button>
             </div>
             <div class="modal-body">
+                @*<form id="personForm">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <input type="hidden" asp-for="@Model.EditPersonVM.GroupId" />
+                    <input type="hidden" asp-for="@Model.EditPersonVM.PersonId" />
+                    <div class="form-group">
+                        <label asp-for="@Model.EditPersonVM.FirstName" class="control-label"></label>
+                        <input asp-for="@Model.EditPersonVM.FirstName" class="form-control" />
+                        <span asp-validation-for="@Model.EditPersonVM.FirstName" class="text-danger validation"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="@Model.EditPersonVM.LastName" class="control-label"></label>
+                        <input asp-for="@Model.EditPersonVM.LastName" class="form-control" />
+                        <span asp-validation-for="@Model.EditPersonVM.LastName" class="text-danger validation"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="@Model.EditPersonVM.ContactNo" class="control-label"></label>
+                        <input asp-for="@Model.EditPersonVM.ContactNo" class="form-control" />
+                        <span asp-validation-for="@Model.EditPersonVM.ContactNo" class="text-danger validation"></span>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button id="btnSaveOrUpdate" type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>*@
+
+
                 <partial name="/Views/Person/_ModalPersonPartial.cshtml" model="new AttendanceCheck.ViewModels.EditPersonViewModel()" />
             </div>
         </div>
@@ -97,7 +124,7 @@
                 <div class="form-group">
                     <form id="deleteForm">
                         <button id="btnCancel" type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
-                        <button onclick="deleteGroup()" type="submit" class="btn btn-danger">Yes</button>
+                        <button id="btnYesDelete" type="submit" class="btn btn-danger" data-dismiss="modal">Yes</button>
                     </form>
                 </div>
             </div>
@@ -110,7 +137,7 @@
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 
-    <script type="text/javascript">
+<script type="text/javascript">
     var personId = 0;
     var groupId = 0;
     var selectedPerson = {};
@@ -123,6 +150,21 @@
 
     });
 
+    //$('#personForm').submit(function (e) {
+    //    e.preventDefault();
+    //});
+
+    $(document).on('submit', '#personForm', function (e) {
+        //$(this).preventDefault();
+        e.preventDefault();
+        console.log('#personForm prevented from submit');
+    });
+
+    $(document).on('submit', '#deleteForm', function (e) {
+        //$(this).preventDefault();
+        e.preventDefault();
+        console.log('#deleteForm prevented from submit');
+    });
     //$('#btn').on('click', function () {
     //    console.log('REMOVED '+selectedPerson);
     //    selectedDOM.closest('tr').remove();
@@ -130,34 +172,7 @@
 
     //});
 
-
-    $(document).on('click', '.editMode', function () {
-        inputsValid = false;
-        addMode = false;
-        selectedPerson = $(this).data('person');
-        console.log(selectedPerson);
-
-        $('#modalTitle').text('Edit person');
-        $('.validation').html('');
-
-        $('#GroupId').val(selectedPerson.GroupId);
-        $('#PersonId').val(selectedPerson.PersonId);
-        $('#LastName').val(selectedPerson.LastName);
-        $('#FirstName').val(selectedPerson.FirstName);
-        $('#ContactNo').val(selectedPerson.ContactNo);
-
-        $('#btnSaveOrUpdate').text('Update');
-    });
-
-    $(document).on('click', '.deleteMode', function () {
-        selectedPerson = $(this).data('person');
-        selectedDOM = $(this);
-        console.log(selectedPerson);
-
-        $('#deleteMessage').text(`Are you sure you want to delete ${selectedPerson.FirstName} ${selectedPerson.LastName}?`);
-    });
-
-    function createNew() {
+    $(document).on('click', '#btnCreateNew', function () {
         addMode = true;
         inputsValid = false;
 
@@ -171,12 +186,31 @@
         $('#ContactNo').val('');
 
         $('#btnSaveOrUpdate').text('Save');
-    }
+    });
 
-    function saveNewPerson() {
+    $(document).on('click', '.editMode', function () {
+        inputsValid = false;
+        addMode = false;
+        selectedPerson = $(this).data('person');
+        selectedDOM = $(this);
+        //console.log(selectedPerson);
+
+        $('#modalTitle').text('Edit person');
+        $('.validation').html('');
+
+        $('#GroupId').val(selectedPerson.GroupId);
+        $('#PersonId').val(selectedPerson.PersonId);
+        $('#LastName').val(selectedPerson.LastName);
+        $('#FirstName').val(selectedPerson.FirstName);
+        $('#ContactNo').val(selectedPerson.ContactNo);
+
+        $('#btnSaveOrUpdate').text('Update');
+    });
+
+    $(document).on('click', '#btnSaveOrUpdate', function (e) {
         inputsValid = $('#personForm').valid();
 
-        if (inputsValid === true) {
+        if (inputsValid === true && $('#btnSaveOrUpdate').text() == 'Save') {
             var newPerson = {
                 GroupId: $('#groupDropDown').val(),
                 LastName: $('#LastName').val(),
@@ -194,7 +228,60 @@
                 data: jsonNewPerson,
                 dataType: 'json',
                 success: function (result) {
+                    //console.log(item.NewPerson.PersonGroup.GroupId + '     ' + item.NewPerson.LastName + '   ' + item.NewPerson.FirstName);
                     //  do something here
+                    var item = result.NewPerson;
+                    var btnDelete, btnEdit, tblDataButtons, tblRow;
+
+                    btnDelete = $(`<button type="button" class="btn btn-danger deleteMode" data-toggle="modal" data-target="#deleteModal"><i class="fa fa-trash" aria-hidden="true"></i> Delete</button>`);
+                    btnDelete.data('person', { GroupId: item.PersonGroup.GroupId, PersonId: item.PersonId, FirstName: item.FirstName, LastName: item.LastName, ContactNo: item.ContactNo });
+                    btnEdit = $(`<button type ="button" class="btn btn-light editMode" data-toggle="modal" data-target="#personModal"><i class="fa fa-pencil" aria-hidden="true"></i> Edit</button>`);
+                    btnEdit.data('person', { GroupId: item.PersonGroup.GroupId, PersonId: item.PersonId, FirstName: item.FirstName, LastName: item.LastName, ContactNo: item.ContactNo });
+
+                    tblDataButtons = $(`<td></td>`);
+                    tblDataButtons.append(btnEdit).append(' ');
+                    tblDataButtons.append(btnDelete);
+
+                    tblDataFN = $(`<td>${item.FirstName} ${item.LastName}</td>`);
+
+                    tblRow = $(`<tr></tr>`);
+
+                    tblRow.append(tblDataFN);
+                    tblRow.append(tblDataButtons);
+
+                    $('#personTableBody').append(tblRow);
+
+                    //loadData();
+                    $('#personModal').modal('hide');
+                },
+                error: function (errormessage) {
+                    console.log('GG save');
+                    console.log(errormessage.Message);
+                }
+            });
+        } else if (inputsValid === true && $('#btnSaveOrUpdate').text() == 'Update') {
+            var updatePerson = {
+                GroupId: selectedPerson.GroupId,
+                PersonId: selectedPerson.PersonId,
+                LastName: $('#LastName').val(),
+                FirstName: $('#FirstName').val(),
+                ContactNo: $('#ContactNo').val()
+            }
+
+            const jsonUpdatePerson = JSON.stringify(updatePerson);
+            console.log(jsonUpdatePerson);
+
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("Edit", "Person")',
+                headers: { 'RequestVerificationToken': token },
+                contentType: 'application/json; charset=utf-8',
+                data: jsonUpdatePerson,
+                dataType: 'json',
+                success: function (result) {
+                    //console.log(item.GroupId + '     ' + item.LastName + '   ' + item.FirstName);
+                    //  do something here
+                    var item = result.UpdatedPerson;
                     var btnDelete, btnEdit, tblDataButtons, tblRow;
 
                     btnDelete = $(`<button type="button" class="btn btn-danger deleteMode" data-toggle="modal" data-target="#deleteModal"><i class="fa fa-trash" aria-hidden="true"></i> Delete</button>`);
@@ -208,33 +295,79 @@
 
                     tblDataFN = $(`<td>${item.FirstName} ${item.LastName}</td>`);
 
-                    tblRow = $(`<tr data-rowid='${item.PersonId}'></tr>`);
-                    tblRow.append(tblDataFN);
-                    tblRow.append(tblDataButtons);
+                    //tblRow = $(`<tr data-rowid='${item.PersonId}'></tr>`);
 
-                    $('#personTableBody').append(tblRow);
+                    //tblRow.append(tblDataFN);
+                    //tblRow.append(tblDataButtons);
 
+                    //selectedDOM.closest('tr').append(tblDataFN).append(tblDataButtons);
+                    selectedDOM.closest('tr').html('').append(tblDataFN).append(tblDataButtons);
+
+                    //loadData();
                     $('#personModal').modal('hide');
                 },
                 error: function (errormessage) {
-                    console.log('GG');
+                    console.log('GG update');
                     console.log(errormessage.Message);
                 }
             });
         }
-    }
+    });
 
-    function editPerson() {
+    $(document).on('click', '.deleteMode', function () {
+        selectedPerson = $(this).data('person');
+        selectedDOM = $(this);
+        //console.log(selectedPerson);
 
-    }
+        $('#deleteMessage').text(`Are you sure you want to delete ${selectedPerson.FirstName} ${selectedPerson.LastName}?`);
+    });
 
-    function updatePerson() {
+    $(document).on('click', '#btnYesDelete', function () {
+        //const deletePerson = { selectedPerson.GroupId };
+        const jsonDeletePerson = JSON.stringify(selectedPerson.PersonId);
+        console.log('stringyfied id: ' + jsonDeletePerson);
 
-    }
+        $.ajax({
+            type: 'POST',
+            url: '@Url.Action("Delete", "Person")',
+            headers: { 'RequestVerificationToken': token },
+            contentType: 'application/json; charset=utf-8',
+            data: jsonDeletePerson,
+            dataType: 'json',
+            success: function (result) {
+                //console.log(item.NewPerson.PersonGroup.GroupId + '     ' + item.NewPerson.LastName + '   ' + item.NewPerson.FirstName);
+                //  do something here
+                //var item = result.NewPerson;
+                //var btnDelete, btnEdit, tblDataButtons, tblRow;
 
-    function saveOrUpdate() {
+                //btnDelete = $(`<button type="button" class="btn btn-danger deleteMode" data-toggle="modal" data-target="#deleteModal"><i class="fa fa-trash" aria-hidden="true"></i> Delete</button>`);
+                //btnDelete.data('person', { GroupId: item.PersonGroup.GroupId, PersonId: item.PersonId, FirstName: item.FirstName, LastName: item.LastName, ContactNo: item.ContactNo });
+                //btnEdit = $(`<button type ="button" class="btn btn-light editMode" data-toggle="modal" data-target="#personModal"><i class="fa fa-pencil" aria-hidden="true"></i> Edit</button>`);
+                //btnEdit.data('person', { GroupId: item.PersonGroup.GroupId, PersonId: item.PersonId, FirstName: item.FirstName, LastName: item.LastName, ContactNo: item.ContactNo });
 
-    }
+                //tblDataButtons = $(`<td></td>`);
+                //tblDataButtons.append(btnEdit).append(' ');
+                //tblDataButtons.append(btnDelete);
+
+                //tblDataFN = $(`<td>${item.FirstName} ${item.LastName}</td>`);
+
+                //tblRow = $(`<tr data-rowid='${item.PersonId}'></tr>`);
+                //tblRow.append(tblDataFN);
+                //tblRow.append(tblDataButtons);
+
+                //$('#personTableBody').append(tblRow);
+                
+                //loadData();
+                selectedDOM.closest('tr').remove();
+                $('#personModal').modal('hide');
+                console.log(result.Message);
+            },
+            error: function (errormessage) {
+                console.log('GG update');
+                console.log(errormessage.Message);
+            }
+        });
+    });
 
     function loadData() {
         if ($('#groupDropDown').val() != 0) {
@@ -242,7 +375,6 @@
         } else {
             $('#btnCreateNew').attr('disabled', true);
         }
-        
 
         const gid = JSON.stringify($('#groupDropDown').val());
 
@@ -254,9 +386,8 @@
             data: gid,
             dataType: 'json',
             success: function (result) {
-                $('#personTableBody').empty();
-
                 var btnDelete, btnEdit, tblDataButtons, tblRow;
+                $('#personTableBody').empty();
 
                 $.each(result, function (key, item) {
                     btnDelete = $(`<button type="button" class="btn btn-danger deleteMode" data-toggle="modal" data-target="#deleteModal"><i class="fa fa-trash" aria-hidden="true"></i> Delete</button>`);
@@ -278,10 +409,10 @@
                 });
             },
             error: function (errormessage) {
-                console.log('GG');
+                console.log('GG load data');
                 console.log(errormessage.Message);
             }
         });
     }
-    </script>
+</script>
 }
